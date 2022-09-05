@@ -4,6 +4,7 @@ import warnings
 from flask import Flask, redirect, request, session, url_for
 from app import consent, alert, experiment, complete, error
 from .io import write_metadata
+from .stages import start_stage, init_stages
 from .utils import gen_code
 
 from collections import OrderedDict
@@ -51,6 +52,7 @@ if secret_key == "PLEASE_CHANGE_THIS":
 
 # Check restart mode; if true, participants can restart experiment.
 allow_restart = cfg["flask"]["ALLOW_RESTART"]
+stages, next_stages = init_stages(cfg["stages"])
 
 # Initialize Flask application.
 app = Flask(__name__)
@@ -77,7 +79,8 @@ def index():
     session["incomplete"] = incomplete_dir
     session["reject"] = reject_dir
     session["allow_restart"] = allow_restart
-
+    session["stages"] = stages
+    session["next_stage"] = next_stages
     # Record incoming metadata.
     info = dict(
         workerId=request.args.get("PROLIFIC_PID"),  # Prolific metadata
@@ -124,8 +127,9 @@ def index():
     # Case 5: repeat visit, preexisting activity.
     elif "workerId" in session:
 
+        first_stage = start_stage()
         # Redirect participant to consent form.
-        return redirect(url_for("consent.consent"))
+        return redirect(url_for(first_stage["path"]))
 
     # Case 6: repeat visit, preexisting log but no session data.
     elif not "workerId" in session and info["workerId"] in os.listdir(meta_dir):

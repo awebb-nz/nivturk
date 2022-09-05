@@ -13,5 +13,13 @@
     "DATA": "../data",
     "INCOMPLETE": "../incomplete",
     "REJECT": "../reject"
+  },
+  "stages": {
+    "consent": {
+      "path": "consent.consent"
+    },
+    "alert": {
+      "path": "alert.alert"
+    }
   }
 }
