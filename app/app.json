@@ -1,0 +1,17 @@
+{
+  "flask": {
+    "SECRET_KEY": "jfghfdjkghfjdk",
+    "ALLOW_RESTART": false,
+    "DEBUG": true
+  },
+  "prolific": {
+    "CODE_SUCCESS": "dfsdfdsfds",
+    "CODE_REJECT": "fdsfdsfds"
+  },
+  "IO": {
+    "METADATA": "../metadata",
+    "DATA": "../data",
+    "INCOMPLETE": "../incomplete",
+    "REJECT": "../reject"
+  }
+}

@@ -1,47 +1,56 @@
-from flask import (Blueprint, redirect, render_template, request, session, url_for)
+from flask import Blueprint, redirect, render_template, request, session, url_for
 from .io import write_data, write_metadata
 
 ## Initialize blueprint.
-bp = Blueprint('experiment', __name__)
+bp = Blueprint("experiment", __name__)
 
-@bp.route('/experiment')
+
+@bp.route("/experiment")
 def experiment():
     """Present jsPsych experiment to participant."""
 
     ## Error-catching: screen for missing session.
-    if not 'workerId' in session:
+    if not "workerId" in session:
 
         ## Redirect participant to error (missing workerId).
-        return redirect(url_for('error.error', errornum=1000))
+        return redirect(url_for("error.error", errornum=1000))
 
     ## Case 1: previously completed experiment.
-    elif 'complete' in session:
+    elif "complete" in session:
 
         ## Redirect participant to complete page.
-        return redirect(url_for('complete.complete'))
+        return redirect(url_for("complete.complete"))
 
     ## Case 2: repeat visit.
-    elif not session['allow_restart'] and 'experiment' in session:
+    elif not session["allow_restart"] and "experiment" in session:
 
         ## Update participant metadata.
-        session['ERROR'] = "1004: Revisited experiment."
-        session['complete'] = 'error'
-        write_metadata(session, ['ERROR','complete'], 'a')
+        session["ERROR"] = "1004: Revisited experiment."
+        session["complete"] = "error"
+        write_metadata(session, ["ERROR", "complete"], "a")
 
         ## Redirect participant to error (previous participation).
-        return redirect(url_for('error.error', errornum=1004))
+        return redirect(url_for("error.error", errornum=1004))
 
     ## Case 3: first visit.
     else:
 
         ## Update participant metadata.
-        session['experiment'] = True
-        write_metadata(session, ['experiment'], 'a')
+        session["experiment"] = True
+        write_metadata(session, ["experiment"], "a")
 
         ## Present experiment.
-        return render_template('experiment.html', workerId=session['workerId'], assignmentId=session['assignmentId'], hitId=session['hitId'], code_success=session['code_success'], code_reject=session['code_reject'])
+        return render_template(
+            "experiment.html",
+            workerId=session["workerId"],
+            assignmentId=session["assignmentId"],
+            hitId=session["hitId"],
+            code_success=session["code_success"],
+            code_reject=session["code_reject"],
+        )
 
-@bp.route('/experiment', methods=['POST'])
+
+@bp.route("/experiment", methods=["POST"])
 def pass_message():
     """Write jsPsych message to metadata."""
 
@@ -51,17 +60,18 @@ def pass_message():
         msg = request.get_json()
 
         ## Update participant metadata.
-        session['MESSAGE'] = msg
-        write_metadata(session, ['MESSAGE'], 'a')
+        session["MESSAGE"] = msg
+        write_metadata(session, ["MESSAGE"], "a")
 
     ## DEV NOTE:
     ## This function returns the HTTP response status code: 200
     ## Code 200 signifies the POST request has succeeded.
     ## For a full list of status codes, see:
     ## https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
-    return ('', 200)
+    return ("", 200)
 
-@bp.route('/incomplete_save', methods=['POST'])
+
+@bp.route("/incomplete_save", methods=["POST"])
 def incomplete_save():
     """Save incomplete jsPsych dataset to disk."""
 
@@ -71,20 +81,21 @@ def incomplete_save():
         JSON = request.get_json()
 
         ## Save jsPsch data to disk.
-        write_data(session, JSON, method='incomplete')
+        write_data(session, JSON, method="incomplete")
 
     ## Flag partial data saving.
-    session['MESSAGE'] = 'incomplete dataset saved'
-    write_metadata(session, ['MESSAGE'], 'a')
+    session["MESSAGE"] = "incomplete dataset saved"
+    write_metadata(session, ["MESSAGE"], "a")
 
     ## DEV NOTE:
     ## This function returns the HTTP response status code: 200
     ## Code 200 signifies the POST request has succeeded.
     ## For a full list of status codes, see:
     ## https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
-    return ('', 200)
+    return ("", 200)
 
-@bp.route('/redirect_success', methods = ['POST'])
+
+@bp.route("/redirect_success", methods=["POST"])
 def redirect_success():
     """Save complete jsPsych dataset to disk."""
 
@@ -94,11 +105,11 @@ def redirect_success():
         JSON = request.get_json()
 
         ## Save jsPsch data to disk.
-        write_data(session, JSON, method='pass')
+        write_data(session, JSON, method="pass")
 
     ## Flag experiment as complete.
-    session['complete'] = 'success'
-    write_metadata(session, ['complete','code_success'], 'a')
+    session["complete"] = "success"
+    write_metadata(session, ["complete", "code_success"], "a")
 
     ## DEV NOTE:
     ## This function returns the HTTP response status code: 200
@@ -106,9 +117,10 @@ def redirect_success():
     ## The corresponding jsPsych function handles the redirect.
     ## For a full list of status codes, see:
     ## https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
-    return ('', 200)
+    return ("", 200)
 
-@bp.route('/redirect_reject', methods = ['POST'])
+
+@bp.route("/redirect_reject", methods=["POST"])
 def redirect_reject():
     """Save rejected jsPsych dataset to disk."""
 
@@ -118,11 +130,11 @@ def redirect_reject():
         JSON = request.get_json()
 
         ## Save jsPsch data to disk.
-        write_data(session, JSON, method='reject')
+        write_data(session, JSON, method="reject")
 
     ## Flag experiment as complete.
-    session['complete'] = 'reject'
-    write_metadata(session, ['complete','code_reject'], 'a')
+    session["complete"] = "reject"
+    write_metadata(session, ["complete", "code_reject"], "a")
 
     ## DEV NOTE:
     ## This function returns the HTTP response status code: 200
@@ -130,9 +142,10 @@ def redirect_reject():
     ## The corresponding jsPsych function handles the redirect.
     ## For a full list of status codes, see:
     ## https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
-    return ('', 200)
+    return ("", 200)
 
-@bp.route('/redirect_error', methods = ['POST'])
+
+@bp.route("/redirect_error", methods=["POST"])
 def redirect_error():
     """Save rejected jsPsych dataset to disk."""
 
@@ -142,11 +155,11 @@ def redirect_error():
         JSON = request.get_json()
 
         ## Save jsPsch data to disk.
-        write_data(session, JSON, method='reject')
+        write_data(session, JSON, method="reject")
 
     ## Flag experiment as complete.
-    session['complete'] = 'error'
-    write_metadata(session, ['complete'], 'a')
+    session["complete"] = "error"
+    write_metadata(session, ["complete"], "a")
 
     ## DEV NOTE:
     ## This function returns the HTTP response status code: 200
@@ -154,4 +167,4 @@ def redirect_error():
     ## The corresponding jsPsych function handles the redirect.
     ## For a full list of status codes, see:
     ## https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
-    return ('', 200)
+    return ("", 200)
