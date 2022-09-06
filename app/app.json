@@ -18,8 +18,13 @@
     "consent": {
       "path": "consent.consent"
     },
+    "data_protection": {
+      "path": "data_protection.dataprotection",
+      "needs": ["consent"]
+    },
     "alert": {
-      "path": "alert.alert"
+      "path": "alert.alert",
+      "needs": ["consent", "data-protection"]
     }
   }
 }

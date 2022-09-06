@@ -2,9 +2,9 @@ import os
 import re
 import warnings
 from flask import Flask, redirect, request, session, url_for
-from app import consent, alert, experiment, complete, error
+from app import consent, data_protection, alert, experiment, complete, error
 from .io import write_metadata
-from .stages import start_stage, init_stages
+from .stages import init_stages, next_stage
 from .utils import gen_code
 
 from collections import OrderedDict
@@ -53,6 +53,8 @@ if secret_key == "PLEASE_CHANGE_THIS":
 # Check restart mode; if true, participants can restart experiment.
 allow_restart = cfg["flask"]["ALLOW_RESTART"]
 stages, next_stages = init_stages(cfg["stages"])
+print(f"stages = {stages}")
+print(f"next_stages = {next_stages}")
 
 # Initialize Flask application.
 app = Flask(__name__)
@@ -60,6 +62,7 @@ app.secret_key = secret_key
 
 # Apply blueprints to the application.
 app.register_blueprint(consent.bp)
+app.register_blueprint(data_protection.bp)
 app.register_blueprint(alert.bp)
 app.register_blueprint(experiment.bp)
 app.register_blueprint(complete.bp)
@@ -127,9 +130,9 @@ def index():
     # Case 5: repeat visit, preexisting activity.
     elif "workerId" in session:
 
-        first_stage = start_stage()
+        stage_next, path_next = next_stage(session)
         # Redirect participant to consent form.
-        return redirect(url_for(first_stage["path"]))
+        return redirect(url_for(path_next))
 
     # Case 6: repeat visit, preexisting log but no session data.
     elif not "workerId" in session and info["workerId"] in os.listdir(meta_dir):

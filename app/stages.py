@@ -1,17 +1,27 @@
 
 def init_stages(stages_dict):
     stage_order = list(stages_dict.keys())
-    windows = sliding_window(stage_order)
+    windows = pairs(stage_order)
     stage_next = {}
     for k, v in windows:
-        stage_next[k] = v
+        val = {
+            'name': v,
+            'path': stages_dict[v]["path"]
+        }
+        stage_next[k] = val
     return stage_order, stage_next
 
 
-def sliding_window(elements, window_size=2):
-    if len(elements) <= window_size:
-        return elements
+def next_stage(session, current_stage=None):
+    if current_stage is None:
+        current_stage = session["stages"][0]
+    current_stage = current_stage.removeprefix("app.")
+    ns = session["next_stage"][current_stage]
+    return ns["name"], ns["path"]
+
+
+def pairs(elements):
     result = []
-    for i in range(len(elements) - window_size + 1):
-        result.append(elements[i:i+window_size])
+    for i in range(len(elements) - 1):
+        result.append((elements[i], elements[i+1]))
     return result
