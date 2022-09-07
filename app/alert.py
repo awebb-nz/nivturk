@@ -1,5 +1,6 @@
 from flask import Blueprint, redirect, render_template, request, session, url_for
 from .io import write_metadata
+from .stages import next_stage_path
 
 ## Initialize blueprint.
 bp = Blueprint("alert", __name__)
@@ -41,6 +42,6 @@ def alert():
 @bp.route("/alert", methods=["POST"])
 def alert_post():
     """Process participant repsonse to alert page."""
-
+    path_next  = next_stage_path(session, __name__)
     ## Redirect participant to experiment.
-    return redirect(url_for("experiment.experiment"))
+    return redirect(url_for(path_next))

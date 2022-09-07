@@ -1,6 +1,6 @@
 from flask import Blueprint, redirect, render_template, request, session, url_for
 from .io import write_metadata
-from .stages import next_stage
+from .stages import next_stage_path
 
 # Initialize blueprint.
 bp = Blueprint("data_protection", __name__)
@@ -43,7 +43,7 @@ def dataprotection():
     # Case 5: repeat visit, previous data-protection.
     else:
 
-        stage_next, path_next = next_stage(session, __name__)
+        path_next = next_stage_path(session, __name__)
         return redirect(url_for(path_next))
 
 
@@ -74,7 +74,7 @@ def dataprotection_post():
         write_metadata(session, ["data-protection"], "a")
 
         # Redirect participant to alert page.
-        stage_next, path_next = next_stage(session, __name__)
+        path_next = next_stage_path(session, __name__)
         return redirect(url_for(path_next))
 
     else:
