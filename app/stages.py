@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 def init_stages(stages_dict):
     def build_next_map(elements):
         result = {}
@@ -16,6 +17,7 @@ def init_stages(stages_dict):
             'name': stage,
             'path': stage_dict["path"],
             'needs': stage_dict.get('needs', []),
+            'gives': stage_dict.get('gives', None),
             'next': next_map.get(stage, None)
         }
         stage_details[stage] = val
@@ -37,7 +39,7 @@ def next_stage_path(session, current_stage=None):
     stage_next = next_stage(session, current_stage)
     if stage_next is None:
         return {"type": Redirect.Complete}
-    return {"type": Redirect.Other, "url": stage_next["path"]
+    return {"type": Redirect.Other, "url": stage_next["path"]}
 
 
 def meets_prerequisites(session, current_stage):
@@ -50,13 +52,21 @@ def meets_prerequisites(session, current_stage):
     return True
 
 
+def check_repeat_visit(session, current_stage):
+    details = session["stage_details"]
+    current_stage = current_stage.removeprefix("app.")
+    gives = details[current_stage]["gives"]
+    return session.get(gives, None) if gives else None
+
+
 def check_general_conditions(session):
-    if not "workerId" in session:
+    if "workerId" not in session:
         return {"type": Redirect.Error, "errno": 1000}
     elif "is_bot" in session:
         return {"type": Redirect.Error, "errno": 1005}
     elif "complete" in session:
         return {"type": Redirect.Complete}
     return None
+
 
 Redirect = Enum("Redirect", ['Complete', 'Error', 'Other'])

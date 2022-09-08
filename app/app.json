@@ -16,15 +16,20 @@
   },
   "stages": {
     "consent": {
-      "path": "consent.consent"
+      "path": "consent.consent",
+      "gives": "consent"
     },
     "data_protection": {
       "path": "data_protection.dataprotection",
-      "needs": ["consent"]
+      "needs": ["consent"],
+      "gives": "data-protection"
+
     },
     "alert": {
       "path": "alert.alert",
-      "needs": ["consent", "data-protection"]
+      "needs": ["consent", "data-protection"],
+      "gives": "alert"
+
     }
   }
 }

@@ -1,6 +1,7 @@
 from flask import Blueprint, redirect, render_template, request, session, url_for
 from .io import write_metadata
-from .stages import next_stage_path, check_general_conditions, Redirect
+from .stages import next_stage_path, check_general_conditions
+from .stages import Redirect, check_repeat_visit
 
 # Initialize blueprint.
 bp = Blueprint("data_protection", __name__)
@@ -16,25 +17,17 @@ def dataprotection():
         if redir_type is Redirect.Complete:
             return redirect(url_for("complete.complete"))
 
-    # Case 2: first visit.
-    elif not "data-protection" in session:
-
-        # Present consent form.
-        return render_template("data_protection.html")
-
-    # Case 4: repeat visit, previous non-data-protection.
-    elif session["data-protection"] == False:
-
-        # Redirect participant to error (decline data-protection).
-        return redirect(url_for("error.error", errornum=1002))
-
-    # Case 5: repeat visit, previous data-protection.
-    else:
-        redir =  next_stage_path(session, __name__)
+    previous = check_repeat_visit(session, __name__)
+    if previous is not None:
+        if not previous:
+            return redirect(url_for("error.error", errornum=1002))
+        redir = next_stage_path(session, __name__)
         redir_type = redir["type"]
         if redir_type is Redirect.Complete:
             return redirect(url_for("complete.complete"))
         return redirect(url_for(redir["url"]))
+
+    return render_template("data_protection.html")
 
 
 @bp.route("/dataprotection", methods=["POST"])
@@ -64,7 +57,7 @@ def dataprotection_post():
         session["data-protection"] = True
         write_metadata(session, ["data-protection"], "a")
 
-        redir =  next_stage_path(session, __name__)
+        redir = next_stage_path(session, __name__)
         redir_type = redir["type"]
         if redir_type is Redirect.Complete:
             return redirect(url_for("complete.complete"))
