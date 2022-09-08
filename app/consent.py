@@ -1,6 +1,6 @@
 from flask import Blueprint, redirect, render_template, request, session, url_for
 from .io import write_metadata
-from .stages import next_stage_path
+from .stages import next_stage_path, check_general_conditions, Redirect
 
 # Initialize blueprint.
 bp = Blueprint("consent", __name__)
@@ -10,41 +10,31 @@ bp = Blueprint("consent", __name__)
 def consent():
     """Present consent form to participant."""
 
-    # Error-catching: screen for missing session.
-    if not "workerId" in session:
-
-        # Redirect participant to error (missing workerId).
-        return redirect(url_for("error.error", errornum=1000))
-
-    # Case 1: previously completed experiment.
-    elif "complete" in session:
-
-        # Redirect participant to complete page.
-        return redirect(url_for("complete.complete"))
+    redir = check_general_conditions(session)
+    if redir is not None:
+        redir_type = redir["type"]
+        if redir_type is Redirect.Error:
+            return redirect(url_for("error.error", errornum=redir["errno"]))
+        if redir_type is Redirect.Complete:
+            return redirect(url_for("complete.complete"))
 
     # Case 2: first visit.
     elif not "consent" in session:
-
         # Present consent form.
         return render_template("consent.html")
 
-    # Case 3: repeat visit, previous bot-detection.
-    elif session["consent"] == "BOT":
-
-        # Redirect participant to error (unusual activity).
-        return redirect(url_for("error.error", errornum=1005))
-
     # Case 4: repeat visit, previous non-consent.
     elif session["consent"] == False:
-
         # Redirect participant to error (decline consent).
         return redirect(url_for("error.error", errornum=1002))
 
     # Case 5: repeat visit, previous consent.
     else:
-
-        path_next = next_stage_path(session, __name__)
-        return redirect(url_for(path_next))
+        redir =  next_stage_path(session, __name__)
+        redir_type = redir["type"]
+        if redir_type is Redirect.Complete:
+            return redirect(url_for("complete.complete"))
+        return redirect(url_for(redir["url"]))
 
 
 @bp.route("/consent", methods=["POST"])
@@ -59,7 +49,8 @@ def consent_post():
     if bot_check:
 
         # Update participant metadata.
-        session["consent"] = "BOT"
+        session["consent"] = False
+        session["is_bot"] = True
         session["complete"] = "error"
         write_metadata(session, ["consent", "complete"], "a")
 
@@ -73,9 +64,11 @@ def consent_post():
         session["consent"] = True
         write_metadata(session, ["consent"], "a")
 
-        # Redirect participant to alert page.
-        path_next = next_stage_path(session, __name__)
-        return redirect(url_for(path_next))
+        redir =  next_stage_path(session, __name__)
+        redir_type = redir["type"]
+        if redir_type is Redirect.Complete:
+            return redirect(url_for("complete.complete"))
+        return redirect(url_for(redir["url"]))
 
     else:
 

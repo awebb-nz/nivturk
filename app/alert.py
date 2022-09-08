@@ -1,6 +1,6 @@
 from flask import Blueprint, redirect, render_template, request, session, url_for
 from .io import write_metadata
-from .stages import next_stage_path
+from .stages import next_stage_path, check_general_conditions, Redirect
 
 ## Initialize blueprint.
 bp = Blueprint("alert", __name__)
@@ -10,17 +10,13 @@ bp = Blueprint("alert", __name__)
 def alert():
     """Present alert to participant."""
 
-    ## Error-catching: screen for missing session.
-    if not "workerId" in session:
-
-        ## Redirect participant to error (missing workerId).
-        return redirect(url_for("error.error", errornum=1000))
-
-    ## Case 1: previously completed experiment.
-    elif "complete" in session:
-
-        ## Redirect participant to complete page.
-        return redirect(url_for("complete.complete"))
+    redir = check_general_conditions(session)
+    if redir is not None:
+        redir_type = redir["type"]
+        if redir_type is Redirect.Error:
+            return redirect(url_for("error.error", errornum=redir["errno"]))
+        if redir_type is Redirect.Complete:
+            return redirect(url_for("complete.complete"))
 
     ## Case 2: repeat visit.
     elif "alert" in session:
@@ -42,6 +38,8 @@ def alert():
 @bp.route("/alert", methods=["POST"])
 def alert_post():
     """Process participant repsonse to alert page."""
-    path_next  = next_stage_path(session, __name__)
-    ## Redirect participant to experiment.
-    return redirect(url_for(path_next))
+    redir =  next_stage_path(session, __name__)
+    redir_type = redir["type"]
+    if redir_type is Redirect.Complete:
+        return redirect(url_for("complete.complete"))
+    return redirect(url_for(redir["url"]))
