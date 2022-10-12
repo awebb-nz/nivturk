@@ -1,7 +1,7 @@
 from flask import Blueprint, redirect, render_template, request, session, url_for
 from .io import write_metadata
-from .stages import next_stage_path, check_general_conditions
-from .stages import Redirect, check_repeat_visit
+from .stages import Redirect, check_repeat_visit, check_general_conditions
+from .state import State
 
 # Initialize blueprint.
 bp = Blueprint("consent", __name__)
@@ -9,6 +9,7 @@ bp = Blueprint("consent", __name__)
 
 @bp.route("/consent")
 def consent():
+    current_stage = State.get_stage(__name__)
     redir = check_general_conditions(session)
     if redir is not None:
         redir_type = redir["type"]
@@ -21,7 +22,7 @@ def consent():
     if previous is not None:
         if not previous:
             return redirect(url_for("error.error", errornum=1002))
-        redir = next_stage_path(session, __name__)
+        redir = State.get_next_stage(current_stage)
         redir_type = redir["type"]
         if redir_type is Redirect.Complete:
             return redirect(url_for("complete.complete"))

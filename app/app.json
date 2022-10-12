@@ -1,32 +1,40 @@
 {
   "flask": {
     "SECRET_KEY": "jfghfdjkghfjdk",
-    "ALLOW_RESTART": false,
-    "DEBUG": true
+    "DEBUG": true,
+    "ALLOW_RESTART": true
   },
   "prolific": {
     "CODE_SUCCESS": "dfsdfdsfds",
     "CODE_REJECT": "fdsfdsfds"
   },
   "IO": {
-    "METADATA": "../metadata",
-    "DATA": "../data",
-    "INCOMPLETE": "../incomplete",
-    "REJECT": "../reject"
+    "METADATA": "metadata",
+    "DATA": "data",
+    "INCOMPLETE": "incomplete",
+    "REJECT": "reject"
   },
+  "stage_order": ["start", "consent", "data-protection", "alert"],
   "stages": {
+	"start": {
+	  "next": "consent"
+	},
     "consent": {
-      "path": "consent.consent",
-      "gives": "consent"
+      "path": "/consent",
+	  "html_file": "consent.html",
+      "gives": "consent",
+	  "next": "data-protection"
     },
-    "data_protection": {
-      "path": "data_protection.dataprotection",
+    "data-protection": {
+      "path": "/data-protection",
+	  "html_file": "data_protection.html",
       "needs": ["consent"],
-      "gives": "data-protection"
-
+      "gives": "data-protection",
+	  "next": "alert"
     },
     "alert": {
-      "path": "alert.alert",
+      "path": "/alert",
+	  "html_file": "consent.html",
       "needs": ["consent", "data-protection"],
       "gives": "alert"
 

@@ -4,11 +4,10 @@ import warnings
 from flask import Flask, redirect, request, session, url_for
 from app import consent, data_protection, alert, experiment, complete, error
 from .io import write_metadata
-from .stages import init_stages, next_stage_path
 from .utils import gen_code
 
-from collections import OrderedDict
-import json
+import state
+from state import State
 
 
 __version__ = "1.2"
@@ -16,49 +15,28 @@ __version__ = "1.2"
 # Define root directory.
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-# Load and parse configuration file.
-cfg = json.load(open(os.path.join(ROOT_DIR, "app.json")),
-                object_pairs_hook=OrderedDict)
-
-# Ensure output directories exist.
-data_dir = os.path.join(ROOT_DIR, cfg["IO"]["DATA"])
-if not os.path.isdir(data_dir):
-    os.makedirs(data_dir)
-meta_dir = os.path.join(ROOT_DIR, cfg["IO"]["METADATA"])
-if not os.path.isdir(meta_dir):
-    os.makedirs(meta_dir)
-incomplete_dir = os.path.join(ROOT_DIR, cfg["IO"]["INCOMPLETE"])
-if not os.path.isdir(incomplete_dir):
-    os.makedirs(incomplete_dir)
-reject_dir = os.path.join(ROOT_DIR, cfg["IO"]["REJECT"])
-if not os.path.isdir(reject_dir):
-    os.makedirs(reject_dir)
-
-print(f"cfg = {cfg}")
+State.ensure_directories(ROOT_DIR)
 
 # Check Flask mode; if debug mode, clear session variable.
-debug = cfg["flask"]["DEBUG"]
-if debug:
+if State.flask_settings["DEBUG"]:
     warnings.warn(
-        "WARNING: Flask currently in debug mode. This should be changed prior to production."
+        "WARNING: Flask currently in debug mode. " +
+        "This should be changed prior to production."
     )
 
 # Check Flask password.
-secret_key = cfg["flask"]["SECRET_KEY"]
-if secret_key == "PLEASE_CHANGE_THIS":
+if State.flask_settings["SECRET_KEY"] == "PLEASE_CHANGE_THIS":
     warnings.warn(
-        "WARNING: Flask password is currently default. This should be changed prior to production."
+        "WARNING: Flask password is currently default. " +
+        "This should be changed prior to production."
     )
 
 # Check restart mode; if true, participants can restart experiment.
-allow_restart = cfg["flask"]["ALLOW_RESTART"]
-stage_order, stage_details = init_stages(cfg["stages"])
-print(f"stages = {stage_order}")
-print(f"details = {stage_details}")
+allow_restart = State.flask_settings["ALLOW_RESTART"]
 
 # Initialize Flask application.
 app = Flask(__name__)
-app.secret_key = secret_key
+app.secret_key = State.flask_settings["SECRET_KEY"]
 
 # Apply blueprints to the application.
 app.register_blueprint(consent.bp)
@@ -68,22 +46,14 @@ app.register_blueprint(experiment.bp)
 app.register_blueprint(complete.bp)
 app.register_blueprint(error.bp)
 
+
 # Define root node.
 @app.route("/")
 def index():
-
     # Debug mode: clear session.
-    if debug:
+    if State.flask_settings["DEBUG"]:
         session.clear()
 
-    # Store directories in session object.
-    session["data"] = data_dir
-    session["metadata"] = meta_dir
-    session["incomplete"] = incomplete_dir
-    session["reject"] = reject_dir
-    session["allow_restart"] = allow_restart
-    session["stages"] = stage_order
-    session["stage_details"] = stage_details
     # Record incoming metadata.
     info = dict(
         workerId=request.args.get("PROLIFIC_PID"),  # Prolific metadata
@@ -94,8 +64,8 @@ def index():
         browser=request.user_agent.browser,  # User metadata
         platform=request.user_agent.platform,  # User metadata
         version=request.user_agent.version,  # User metadata
-        code_success=cfg["prolific"].get("CODE_SUCCESS", gen_code(8).upper()),
-        code_reject=cfg["prolific"].get("CODE_REJECT", gen_code(8).upper()),
+        #code_success=cfg["prolific"].get("CODE_SUCCESS", gen_code(8).upper()),
+        #code_reject=cfg["prolific"].get("CODE_REJECT", gen_code(8).upper()),
     )
 
     # Case 1: workerId absent form URL.
@@ -134,11 +104,13 @@ def index():
         return redirect(url_for(path_next))
 
     # Case 6: repeat visit, preexisting log but no session data.
-    elif not "workerId" in session and info["workerId"] in os.listdir(meta_dir):
+    elif "workerId" not in session and \
+            info["workerId"] in os.listdir(State.directory_settings["METADATA"]):
 
         # Parse log file.
         with open(os.path.join(session["metadata"], info["workerId"]), "r") as f:
             logs = f.read()
+
 
         # Extract subject ID.
         info["subId"] = re.search("subId\t(.*)\n", logs).group(1)
